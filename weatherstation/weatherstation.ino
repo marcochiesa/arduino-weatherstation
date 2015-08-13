@@ -44,13 +44,13 @@ IPAddress gw(192, 168, 1, 1);
 // the setup function runs once when you press reset or power the board
 void setup() {
   Serial.begin(115200);
-  Serial.println("Weather Station initializing ...");
+  Serial.println(F("Weather Station initializing ..."));
 
   if (!htu.begin()) {
-    Serial.println("Couldn't find temp and humidity sensor!");
+    Serial.println(F("Couldn't find temp and humidity sensor!"));
     while (1);
   }
-  Serial.println("temp/humidity sensor ready");
+  Serial.println(F("temp/humidity sensor ready"));
 
   // 9600 NMEA is the default baud rate for Adafruit MTK GPS's- some use 4800
   GPS.begin(9600);
@@ -69,16 +69,16 @@ void setup() {
   delay(1000);
   // Ask for firmware version
   mySerial.println(PMTK_Q_RELEASE);
-  Serial.println("GPS sensor ready");
+  Serial.println(F("GPS sensor ready"));
 
   // start the Ethernet connection:
   if (Ethernet.begin(mac) == 0) {
-    Serial.println("Failed to configure Ethernet using DHCP");
+    Serial.println(F("Failed to configure Ethernet using DHCP"));
     // no point in carrying on, so do nothing forevermore:
     // try to congifure using IP address instead of DHCP:
     Ethernet.begin(mac, ip, gw);
   }
-  Serial.println("Ethernet ready");
+  Serial.println(F("Ethernet ready"));
   Serial.println(Ethernet.localIP());
 }
 
@@ -111,37 +111,45 @@ uint32_t timer = millis();
 void loop() {
   client.stop();
 
+  String data = F("");
   // if you get a connection, report back via serial:
   if (client.connect(server, 80)) {
-    Serial.println("reporting conditions to server ...");
-    client.println("POST /reportconditions HTTP/1.1");
-    client.println("Host: weatherstationviewer.appspot.com");
-    client.println("Content-Type: application/x-www-form-urlencoded");
-    client.println("Connection: close");
-    client.println("User-Agent: Arduino/1.0");
-    client.println();
-    client.print("tag="); client.print(station);
-    client.print("&temperature="); client.print(htu.readTemperature());
-    client.print("&humidity="); client.print(htu.readHumidity());
+    Serial.println(F("reporting conditions to server ..."));
+    client.println(F("POST /reportconditions HTTP/1.1"));
+    client.println(F("Host: weatherstationviewer.appspot.com"));
+    client.println(F("Content-Type: application/x-www-form-urlencoded"));
+    client.println(F("Connection: close"));
+    client.println(F("User-Agent: Arduino/1.0"));
 
-    // if a sentence is received, we can check the checksum, parse it...
+    data += F("tag="); data += station;
+    data += F("&amp;temperature="); data += htu.readTemperature();
+    data += F("&amp;humidity="); data += htu.readHumidity();
+
+    // if have satellite fix and sentence is received, check the checksum, parse it...
     // this also sets the newNMEAreceived() flag to false
     if (GPS.newNMEAreceived() && GPS.parse(GPS.lastNMEA()) && GPS.fix) {
-        client.print("&latitude="); client.print(GPS.latitudeDegrees);
-        client.print("&longitude="); client.print(GPS.longitudeDegrees);
+        data += F("&amp;latitude="); data += GPS.latitudeDegrees;
+        data += F("&amp;longitude="); data += GPS.longitudeDegrees;
     }
 
+    client.print(F("Content-Length: "));
+    client.println(data.length());
+    client.println();
+    client.print(data);
     client.println();
   } else {
     // if you didn't get a connection to the server:
-    Serial.println("server connection failed");
+    Serial.println(F("server connection failed"));
   }
 
   // if there's incoming data from the server print on serial port for debugging.
   if (client.available()) {
-    char c = client.read();
-    Serial.write(c);
+    Serial.println(F("response available ..."));
+    char c;
+    while ((c = client.read()) != -1)
+        Serial.write(c);
   }
+  Serial.println(F("no further response"));
 
   delay(10000); //wait for 10 seconds
 }
