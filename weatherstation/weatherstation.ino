@@ -33,9 +33,6 @@ Adafruit_GPS GPS(&mySerial);
 // Set GPSECHO to 'false' to turn off echoing the GPS data to the Serial console
 // Set to 'true' if you want to debug and listen to the raw GPS sentences.
 #define GPSECHO  true
-// this keeps track of whether we're using the interrupt
-// off by default!
-boolean usingInterrupt = false;
 
 byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
 char server[] = "http://weatherstationviewer.appspot.com";
@@ -103,11 +100,9 @@ void useInterrupt(boolean v) {
     // in the middle and call the "Compare A" function above
     OCR0A = 0xAF;
     TIMSK0 |= _BV(OCIE0A);
-    usingInterrupt = true;
   } else {
     // do not call the interrupt function COMPA anymore
     TIMSK0 &= ~_BV(OCIE0A);
-    usingInterrupt = false;
   }
 }
 
